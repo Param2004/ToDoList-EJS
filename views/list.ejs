@@ -1,4 +1,63 @@
 <%- include("header") -%>
+<div class="box" id="heading">
+    <h1> <%= listTitle %> </h1>
+</div>
+<div class="box">
+    <div id="sortable-list">
+        <% newListItems.forEach((item) => { %>
+            <div class="item" data-id="<%= item._id %>">
+                <form action="/delete" method="post">
+                    <input type="checkbox" name="check" value="<%= item._id %>" onchange="this.form.submit()">
+                    <p> <%= item.name %> </p>
+                </form>
+            </div>
+        <% }) %>
+    </div>
+
+    <form action="/" class="item" method="post">
+        <input type="text" name="newItem" placeholder="New Item" autocomplete="off">
+        <button type="submit" name="list" value="<%= listTitle %>">+</button>
+    </form>
+</div>
+<%- include("footer") -%>
+
+<!-- Include SortableJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sortableList = document.getElementById("sortable-list");
+        
+        new Sortable(sortableList, {
+            animation: 150,
+            ghostClass: "dragging",
+            onEnd: function (evt) {
+                let order = [];
+                document.querySelectorAll("#sortable-list .item").forEach((item, index) => {
+                    order.push({ id: item.getAttribute("data-id"), position: index });
+                });
+
+                fetch("/reorder", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ order, listName: "<%= listTitle %>" })
+                });
+            }
+        });
+    });
+</script>
+
+<style>
+    .dragging {
+        opacity: 0.5;
+    }
+</style>
+
+
+
+
+<!-- <%- include("header") -%>
     <div class="box" id="heading">
         <h1> <%= listTitle %> </h1>
     </div>
@@ -18,4 +77,4 @@
             <button type="submit" name="list" value=<%= listTitle %>>+</button>
         </form>
     </div>
-<%- include("footer") -%>
+<%- include("footer") -%> -->

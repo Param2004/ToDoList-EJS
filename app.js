@@ -9,33 +9,24 @@ const app = express();
 
 app.set('view engine', 'ejs');
 
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 mongoose.connect("mongodb+srv://param2004:param3431@cluster0.zkgsb7i.mongodb.net/?retryWrites=true&w=majority");
 
-
-
-
+// Updated Schema with position field
 const itemsSchema = {
-    name: String
+    name: String,
+    position: { type: Number, default: 0 } // Track task order
 };
 
 const Item = mongoose.model("Item", itemsSchema);
 
-const item1 = new Item({
-    name: "believe in yourself"
-});
-const item2 = new Item({
-    name: "trust your lovd onc"
-});
-const item3 = new Item({
-    name: "respect ur eldrs"
-});
+const item1 = new Item({ name: "Task 1", position: 0 });
+const item2 = new Item({ name: "Task 2", position: 1 });
+const item3 = new Item({ name: "Task 3", position: 2 });
 
 const dfltItms = [item1, item2, item3];
-
-
 
 const listSchema = {
     name: String,
@@ -44,103 +35,246 @@ const listSchema = {
 
 const List = mongoose.model("List", listSchema);
 
-
+// Fetch tasks in correct order
 app.get("/", (req, res) => {
     let day = date.getDay();
-    Item.find().then((items) => {
-        if(items.length === 0) {
-            Item.insertMany(dfltItms).then(() => {console.log("data inserted");
-            }).catch((err) => {
-                console.log(err);
-            });
+    Item.find().sort({ position: 1 }).then((items) => {
+        if (items.length === 0) {
+            Item.insertMany(dfltItms).then(() => console.log("Default items inserted"));
             res.redirect("/");
         } else {
-            res.render("list", {listTitle: day, newListItems: items});
+            res.render("list", { listTitle: day, newListItems: items });
         }
-    }).catch((err) => {
-        console.log(err);
-    });
-    
+    }).catch((err) => console.log(err));
 });
 
-
-
-
+// Add new item
 app.post("/", (req, res) => {
     const item = req.body.newItem;
     const list = req.body.list;
     let day = date.getDay();
 
-    const itm = new Item({
-        name: item
+    Item.countDocuments().then((count) => {
+        const newItem = new Item({
+            name: item,
+            position: count // Assign the next position
+        });
+
+        if (list === day) {
+            newItem.save().then(() => res.redirect("/"));
+        } else {
+            List.findOne({ name: list }).then((found) => {
+                found.items.push(newItem);
+                found.save();
+                res.redirect("/" + list);
+            });
+        }
     });
-    
-    if(list === day) {
-        itm.save();
-        res.redirect("/");
-    } else {
-        List.findOne({name: list}).then((found) => {
-            found.items.push(itm);
-            found.save();
-            res.redirect("/" + list)
-        })
-    }
 });
 
-
-
+// Delete an item
 app.post("/delete", (req, res) => {
     const checkedoff = req.body.check;
     const listName = req.body.listName;
     let day = date.getDay();
-    if(listName === day){
-        Item.findByIdAndRemove(checkedoff).then(() => {
-            res.redirect("/");
-        }).catch((err) => {
-        console.log(err);
-        });
+
+    if (listName === day) {
+        Item.findByIdAndRemove(checkedoff).then(() => res.redirect("/"));
     } else {
-        List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedoff}}}).then(() => {
+        List.findOneAndUpdate({ name: listName }, { $pull: { items: { _id: checkedoff } } }).then(() => {
             res.redirect("/" + listName);
         });
     }
-    
 });
 
+// Handle drag-and-drop reordering
+app.post("/reorder", async (req, res) => {
+    const { order } = req.body;
 
-
-
-
-app.get("/:customList", (req, res) => {
-    const listName = _.capitalize(req.params.customList);
-
-    List.findOne({name: listName}).then((found) => {
-        if(!found) {
-            const list = new List({
-            name: listName,
-            items: dfltItms
-        });
-        list.save();
-        res.redirect("/" + listName);
-    } else {
-        res.render("list", {listTitle: found.name, newListItems: found.items});
+    try {
+        for (let i = 0; i < order.length; i++) {
+            await Item.findByIdAndUpdate(order[i].id, { position: i });
         }
-    }).catch((err) => {
-        console.log(err);
-    });
-
-    
+        res.status(200).send({ message: "Order updated successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Internal server error" });
+    }
 });
 
+// Custom list handling
+// app.get("/:customList", (req, res) => {
+//     const listName = _.capitalize(req.params.customList);
+
+//     List.findOne({ name: listName }).then((found) => {
+//         if (!found) {
+//             const list = new List({
+//                 name: listName,
+//                 items: dfltItms
+//             });
+//             list.save();
+//             res.redirect("/" + listName);
+//         } else {
+//             res.render("list", { listTitle: found.name, newListItems: found.items.sort((a, b) => a.position - b.position) });
+//         }
+//     }).catch((err) => console.log(err));
+// });
+
+// About Page
 app.get("/about", (req, res) => {
     res.render("about");
 });
 
-
-
-
-
-
+// Start Server
 app.listen(port, () => {
-    console.log("Server is Running 😊👌");
+    console.log(`Server is Running on port ${port} 😊👌`);
 });
+
+
+
+// const express = require("express");
+// const bodyParser = require("body-parser");
+// const date = require(__dirname + "/date.js");
+// const mongoose = require("mongoose");
+// const _ = require("lodash");
+// const port = process.env.PORT || 3001;
+
+// const app = express();
+
+// app.set('view engine', 'ejs');
+
+// app.use(bodyParser.urlencoded({extended: true}));
+// app.use(express.static("public"));
+
+// mongoose.connect("mongodb+srv://param2004:param3431@cluster0.zkgsb7i.mongodb.net/?retryWrites=true&w=majority");
+
+
+
+
+// const itemsSchema = {
+//     name: String
+// };
+
+// const Item = mongoose.model("Item", itemsSchema);
+
+// const item1 = new Item({
+//     name: "Task 1"
+// });
+// const item2 = new Item({
+//     name: "Task 2"
+// });
+// const item3 = new Item({
+//     name: "Task 3"
+// });
+
+// const dfltItms = [item1, item2, item3];
+
+
+
+// const listSchema = {
+//     name: String,
+//     items: [itemsSchema]
+// };
+
+// const List = mongoose.model("List", listSchema);
+
+
+// app.get("/", (req, res) => {
+//     let day = date.getDay();
+//     Item.find().then((items) => {
+//         if(items.length === 0) {
+//             Item.insertMany(dfltItms).then(() => {console.log("data inserted");
+//             }).catch((err) => {
+//                 console.log(err);
+//             });
+//             res.redirect("/");
+//         } else {
+//             res.render("list", {listTitle: day, newListItems: items});
+//         }
+//     }).catch((err) => {
+//         console.log(err);
+//     });
+    
+// });
+
+
+
+
+// app.post("/", (req, res) => {
+//     const item = req.body.newItem;
+//     const list = req.body.list;
+//     let day = date.getDay();
+
+//     const itm = new Item({
+//         name: item
+//     });
+    
+//     if(list === day) {
+//         itm.save();
+//         res.redirect("/");
+//     } else {
+//         List.findOne({name: list}).then((found) => {
+//             found.items.push(itm);
+//             found.save();
+//             res.redirect("/" + list)
+//         })
+//     }
+// });
+
+
+
+// app.post("/delete", (req, res) => {
+//     const checkedoff = req.body.check;
+//     const listName = req.body.listName;
+//     let day = date.getDay();
+//     if(listName === day){
+//         Item.findByIdAndRemove(checkedoff).then(() => {
+//             res.redirect("/");
+//         }).catch((err) => {
+//         console.log(err);
+//         });
+//     } else {
+//         List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedoff}}}).then(() => {
+//             res.redirect("/" + listName);
+//         });
+//     }
+    
+// });
+
+
+
+
+
+// app.get("/:customList", (req, res) => {
+//     const listName = _.capitalize(req.params.customList);
+
+//     List.findOne({name: listName}).then((found) => {
+//         if(!found) {
+//             const list = new List({
+//             name: listName,
+//             items: dfltItms
+//         });
+//         list.save();
+//         res.redirect("/" + listName);
+//     } else {
+//         res.render("list", {listTitle: found.name, newListItems: found.items});
+//         }
+//     }).catch((err) => {
+//         console.log(err);
+//     });
+
+    
+// });
+
+// app.get("/about", (req, res) => {
+//     res.render("about");
+// });
+
+
+
+
+
+
+// app.listen(port, () => {
+//     console.log("Server is Running 😊👌");
+// });
