@@ -31,6 +31,10 @@ h1 {
   border-bottom: 1px solid #F1F1F1;
 }
 
+form {
+  display: inline;
+}
+
 .item:last-child {
   border-bottom: 0;
 }
@@ -64,9 +68,14 @@ button {
   border-color: transparent;
   background-color: #A683E3;
   color: #fff;
+  cursor: pointer;
   font-size: 30px;
   padding-bottom: 6px;
   border-width: 0;
+}
+
+.edit-btn {
+  background-color: #ffffff;
 }
 
 input[type="text"] {
@@ -94,3 +103,5 @@ footer {
   color: rgba(0, 0, 0, 0.5);
   text-align: center;
 }
+
+

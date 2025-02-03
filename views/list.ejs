@@ -1,16 +1,25 @@
 <%- include("header") -%>
 <div class="box" id="heading">
     <h1> <%= listTitle %> </h1>
+    <a href="/login">
+    <button>Logout</button>
+    </a>
 </div>
 <div class="box">
     <div id="sortable-list">
         <% newListItems.forEach((item) => { %>
-            <div class="item" data-id="<%= item._id %>">
-                <form action="/delete" method="post">
+            <form action="/delete" method="post">
+                <div class="item" data-id="<%= item._id %>">
                     <input type="checkbox" name="check" value="<%= item._id %>" onchange="this.form.submit()">
-                    <p> <%= item.name %> </p>
-                </form>
-            </div>
+                </div>
+                <input type="hidden" name="listName" value=<%= listTitle %>>
+            </form>
+            <form action="/edit" method="post" class="edit-form">
+                <input type="hidden" name="itemId" value="<%= item._id %>">
+                <input type="hidden" name="listName" value="<%= listTitle %>">
+                <input type="text" name="updatedName" value="<%= item.name %>" class="edit-input">
+                <button type="submit" class="edit-btn">✏️</button>
+            </form>
         <% }) %>
     </div>
 
@@ -53,28 +62,3 @@
         opacity: 0.5;
     }
 </style>
-
-
-
-
-<!-- <%- include("header") -%>
-    <div class="box" id="heading">
-        <h1> <%= listTitle %> </h1>
-    </div>
-    <div class="box">
-
-      <%  newListItems.forEach((item) => { %>
-            <form action="/delete" method="post">
-                <div class="item">
-                    <input type="checkbox" name="check" value="<%= item._id %>" onchange="this.form.submit()">
-                    <p> <%= item.name %> </p>
-                </div>
-                <input type="hidden" name="listName" value=<%= listTitle %>>
-            </form>
-      <%  }) %>
-        <form action="/" class="item" method="post">
-            <input type="text" name="newItem" placeholder="New Item" autocomplete="off">
-            <button type="submit" name="list" value=<%= listTitle %>>+</button>
-        </form>
-    </div>
-<%- include("footer") -%> -->
